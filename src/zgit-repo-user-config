@@ -1,0 +1,96 @@
+function zgit-repo-user-config-main()
+{
+    # If option -a is given, configure as new path
+    local given_option
+    local user_name user_mail
+    local stored_path
+
+    given_option="$(echo $1 | xargs | cut -d ' ' -f 1)"
+
+    [[ "${given_option}" == '-a' ]] && {
+        [[ -n "${ZGITREPO_USER_CONFIG_FILE}" ]] && {
+            [[ ! -e $ZGITREPO_USER_CONFIG_FILE ]] && {
+                touch $ZGITREPO_USER_CONFIG_FILE
+                echo "[INFO] Initialized ${ZGITREPO_USER_CONFIG_FILE}"
+            }
+
+            # Check path included or not
+            foreach stored_path ($(cat $ZGITREPO_USER_CONFIG_FILE | cut -d '%' -f 1)); do
+                [[ "$(pwd)" =~ "^${stored_path}.*$" ]] && {
+                    echo "[ERROR] Registered path ${stored_path} includes current directory" 1>&2
+                    return -1
+                }
+
+                [[ "${stored_path}" =~ "^$(pwd).*$" ]] && {
+                    echo "[ERROR] Child path ${stored_path} is already registered" 1>&2
+                    return -1
+                }
+            ; done
+
+            # Put user information
+            vared -p 'Your name  >> ' -c user_name
+            vared -p 'Your email >> ' -c user_mail
+
+            [[ -z "${user_name}" || -z "${user_mail}" ]] && {
+                echo "[ERROR] Username and mail address must be specified" 1>&2
+                return -1
+            }
+
+            # Write record
+            echo "$(pwd)%${user_name}%${user_mail}" >> $ZGITREPO_USER_CONFIG_FILE
+
+            # Show information
+            echo "Configured as"
+            echo "    Path: $(pwd)"
+            echo "    Name: ${user_name}"
+            echo "    Email: ${user_mail}"
+
+            return 0
+
+        } || {
+            echo "[ERROR] Variable ZGITREPO_USER_CONFIG_FILE not configured" 1>&2
+            return -1
+        }
+    }
+
+    # Check current directory is under git repo or not
+    [[ ! -n "$(git branch 2>/dev/null)" ]] && {
+        return -1
+    }
+
+    # Check configuration file
+    [[ -z "${ZGITREPO_USER_CONFIG_FILE}" || -z "${ZGITREPO_USER_CONFIG_FILE}" ]] && {
+        return -1
+    }
+
+    # Check local user is configured or not
+    [[ -n "$(git config --local user.name)" || -n "$(git config --local user.email)" ]] && {
+        return -1
+    }
+
+    # Search configuration for top directory
+    local found_path_config stored_path_config
+    cat $ZGITREPO_USER_CONFIG_FILE | while read stored_path_config; do
+        [[ "$(pwd)" =~ "^$(echo ${stored_path_config} | cut -d '%' -f 1).*$" ]] && {
+            found_path_config=${stored_path_config}
+            break
+        }
+    ; done
+
+    [[ -n "${found_path_config}" ]] && {
+        stored_path=$(echo ${found_path_config} | cut -d '%' -f 1)
+        user_name=$(echo ${found_path_config} | cut -d '%' -f 2)
+        user_mail=$(echo ${found_path_config} | cut -d '%' -f 3)
+
+        # Configure
+        git config --local user.name "${user_name}"
+        git config --local user.email "${user_mail}"
+
+        echo "This repository was configured by following settings"
+        echo "  Base config path : ${stored_path}"
+        echo "  User name        : ${user_name}"
+        echo "  Mail address     : ${user_mail}"
+    }
+}
+
+zgit-repo-user-config-main $*
