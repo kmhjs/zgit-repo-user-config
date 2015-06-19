@@ -18,8 +18,13 @@ You can set this path of configuration file as your favorite path and file name.
 
 1. Load `zgit-repo-user-config`.
 2. In parent directory, type `zgit-repo-user-config -a` for register directory as parent directory.
-3. Call this plugin in `preexec`.
-<wip>
+3. Call this plugin in `precmd`. (in `.zshrc` etc)
+
+```
+FPATH=<your plugin install directory>:$FPATH
+autoload -Uz zgit-repo-user-config
+add-zsh-hook precmd zgit-repo-user-config
+```
 
 ## License
 
