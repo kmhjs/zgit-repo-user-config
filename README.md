@@ -17,7 +17,6 @@ And in `.zshrc`.
 ```
 FPATH=<your plugin install directory>:$FPATH
 autoload -Uz zgit-repo-user-config
-add-zsh-hook precmd zgit-repo-user-config
 ```
 
 ### Installing using Antigen
