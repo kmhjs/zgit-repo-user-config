@@ -4,13 +4,14 @@ This zsh plugin was developed for auto user information configuration of git rep
 
 ## How to set up
 
-### Manually install
-
 Write configuration in your `.zshenv` as follows.
 
 ```
 export ZGITREPO_USER_CONFIG_FILE=$HOME/.zgitrepo_user.config
 ```
+
+### Manually install
+
 
 And in `.zshrc`.
 ```
@@ -34,6 +35,10 @@ You can set this path of configuration file as your favorite path and file name.
 1. Load `zgit-repo-user-config`.
 2. In parent directory, type `zgit-repo-user-config -a` for register directory as parent directory.
 3. Call this plugin in `precmd`. (in `.zshrc` etc)
+
+```
+add-zsh-hook precmd zgit-repo-user-config
+```
 
 ## License
 
