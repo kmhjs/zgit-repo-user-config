@@ -10,28 +10,28 @@ Write configuration in your `.zshenv` as follows.
 export ZGITREPO_USER_CONFIG_FILE=$HOME/.zgitrepo_user.config
 ```
 
-### Manually install
+### Manual install
 
+In `.zshrc`.
 
-And in `.zshrc`.
 ```
 FPATH=<your plugin install directory>:$FPATH
 autoload -Uz zgit-repo-user-config
 ```
 
-### Installing using Antigen
+### Install with Antigen
 
-If you use Antigen, add the following line to your .zshrc:
+If you use Antigen, add the following line to your `.zshrc`.
 
 ```
-antigen bundle upamune/zgit-repo-user-config
+antigen bundle kmhjs/zgit-repo-user-config
 ```
 
 You can set this path of configuration file as your favorite path and file name.
 
-### Normal state
+### Basic configuration
 
-1. Load `zgit-repo-user-config`.
+1. Load `zgit-repo-user-config`. (Manually, or with Antigen)
 2. In parent directory, type `zgit-repo-user-config -a` for register directory as parent directory.
 3. Call this plugin in `precmd`. (in `.zshrc` etc)
 
