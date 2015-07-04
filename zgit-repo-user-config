@@ -59,7 +59,7 @@ function zgit-repo-user-config-main()
     }
 
     # Check configuration file
-    [[ -z "${ZGITREPO_USER_CONFIG_FILE}" || ! -e "${ZGITREPO_USER_CONFIG_FILE}" ]] && {
+    [[ -z "${ZGITREPO_USER_CONFIG_FILE}" || ! -e ${ZGITREPO_USER_CONFIG_FILE} ]] && {
         return -1
     }
 
