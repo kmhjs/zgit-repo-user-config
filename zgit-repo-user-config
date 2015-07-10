@@ -41,8 +41,8 @@ function zgit-repo-user-config-main()
 
             # Show information
             echo "Configured as"
-            echo "    Path: $(pwd)"
-            echo "    Name: ${user_name}"
+            echo "    Path:  $(pwd)"
+            echo "    Name:  ${user_name}"
             echo "    Email: ${user_mail}"
 
             return 0
