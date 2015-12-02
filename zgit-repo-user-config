@@ -46,6 +46,32 @@ function local::zgit-repo-user-config::validation::include_path()
 
     return 0
 }
+function local::zgit-repo-user-config::validation::in_git_branch()
+{
+    [[ -z "$(git branch 2>/dev/null)" ]] && {
+        return 1
+    }
+
+    return 0
+}
+function local::zgit-repo-user-config::validation::configuration_file()
+{
+    # Check configuration file
+    [[ -z "${ZGITREPO_USER_CONFIG_FILE}" || ! -e ${ZGITREPO_USER_CONFIG_FILE} ]] && {
+        return 1
+    }
+
+    return 0
+}
+
+function local::zgit-repo-user-config::validation::git_configured_state()
+{
+    [[ -n "$(git config --local user.name)" || -n "$(git config --local user.email)" ]] && {
+        return 1
+    }
+
+    return 0
+}
 
 function local::zgit-repo-user-config::main()
 {
@@ -77,19 +103,16 @@ function local::zgit-repo-user-config::main()
 
 
     # Check current directory is under git repo or not
-    [[ ! -n "$(git branch 2>/dev/null)" ]] && {
-        return -1
-    }
+    local::zgit-repo-user-config::validation::in_git_branch
+    [[ $? != 0 ]] && return 1
 
     # Check configuration file
-    [[ -z "${ZGITREPO_USER_CONFIG_FILE}" || ! -e ${ZGITREPO_USER_CONFIG_FILE} ]] && {
-        return -1
-    }
+    local::zgit-repo-user-config::validation::configuration_file
+    [[ $? != 0 ]] && return 1
 
     # Check local user is configured or not
-    [[ -n "$(git config --local user.name)" || -n "$(git config --local user.email)" ]] && {
-        return -1
-    }
+    local::zgit-repo-user-config::validation::git_configured_state
+    [[ $? != 0 ]] && return 1
 
     # Search configuration for top directory
     local found_path_config stored_path_config
