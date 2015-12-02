@@ -1,4 +1,4 @@
-function zgit-repo-user-config-main()
+function local::zgit-repo-user-config::main()
 {
     # If option -a is given, configure as new path
     local user_name user_mail
@@ -96,4 +96,4 @@ function zgit-repo-user-config-main()
     }
 }
 
-zgit-repo-user-config-main $*
+local::zgit-repo-user-config::main $*
