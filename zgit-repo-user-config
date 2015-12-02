@@ -1,96 +1,157 @@
-function zgit-repo-user-config-main()
+function local::zgit-repo-user-config::configuration::init()
 {
-    # If option -a is given, configure as new path
-    local given_option
-    local user_name user_mail
-    local stored_path
-
-    given_option="$(echo $1 | xargs | cut -d ' ' -f 1)"
-
-    [[ "${given_option}" == '-a' ]] && {
-        [[ -n "${ZGITREPO_USER_CONFIG_FILE}" ]] && {
-            [[ ! -e $ZGITREPO_USER_CONFIG_FILE ]] && {
-                touch $ZGITREPO_USER_CONFIG_FILE
-                echo "[INFO] Initialized ${ZGITREPO_USER_CONFIG_FILE}"
-            }
-
-            # Check path included or not
-            foreach stored_path ($(cat $ZGITREPO_USER_CONFIG_FILE | cut -d '%' -f 1)); do
-                [[ "$(pwd)" =~ "^${stored_path}.*$" ]] && {
-                    echo "[ERROR] Registered path ${stored_path} includes current directory" 1>&2
-                    return -1
-                }
-
-                [[ "${stored_path}" =~ "^$(pwd).*$" ]] && {
-                    echo "[ERROR] Child path ${stored_path} is already registered" 1>&2
-                    return -1
-                }
-            ; done
-
-            # Put user information
-            vared -p 'Your name  >> ' -c user_name
-            vared -p 'Your email >> ' -c user_mail
-
-            [[ -z "${user_name}" || -z "${user_mail}" ]] && {
-                echo "[ERROR] Username and mail address must be specified" 1>&2
-                return -1
-            }
-
-            # Write record
-            echo "$(pwd)%${user_name}%${user_mail}" >> $ZGITREPO_USER_CONFIG_FILE
-
-            # Show information
-            echo "Configured as"
-            echo "    Path:  $(pwd)"
-            echo "    Name:  ${user_name}"
-            echo "    Email: ${user_mail}"
-
-            return 0
-
-        } || {
-            echo "[ERROR] Variable ZGITREPO_USER_CONFIG_FILE not configured" 1>&2
-            return -1
-        }
+    [[ ! -e ${ZGITREPO_USER_CONFIG_FILE} ]] && {
+        touch ${ZGITREPO_USER_CONFIG_FILE}
+        echo "[INFO] Initialized ${ZGITREPO_USER_CONFIG_FILE}"
     }
+}
 
-    # Check current directory is under git repo or not
-    [[ ! -n "$(git branch 2>/dev/null)" ]] && {
+function local::zgit-repo-user-config::configuration::add()
+{
+    # Put user information
+    vared -p 'Your name  >> ' -c user_name
+    vared -p 'Your email >> ' -c user_mail
+
+    [[ -z "${user_name}" || -z "${user_mail}" ]] && {
+        echo "[ERROR] Username and mail address must be specified" 1>&2
         return -1
     }
 
-    # Check configuration file
-    [[ -z "${ZGITREPO_USER_CONFIG_FILE}" || ! -e ${ZGITREPO_USER_CONFIG_FILE} ]] && {
-        return -1
-    }
+    # Write record
+    echo "$(pwd)%${user_name}%${user_mail}" >> ${ZGITREPO_USER_CONFIG_FILE}
 
-    # Check local user is configured or not
-    [[ -n "$(git config --local user.name)" || -n "$(git config --local user.email)" ]] && {
-        return -1
-    }
+    # Show information
+    echo "Configured as"
+    echo "    Path:  $(pwd)"
+    echo "    Name:  ${user_name}"
+    echo "    Email: ${user_mail}"
+}
 
-    # Search configuration for top directory
-    local found_path_config stored_path_config
-    cat $ZGITREPO_USER_CONFIG_FILE | while read stored_path_config; do
-        [[ "$(pwd)" =~ "^$(echo ${stored_path_config} | cut -d '%' -f 1).*$" ]] && {
-            found_path_config=${stored_path_config}
-            break
-        }
-    ; done
+function local::zgit-repo-user-config::configuration::setup_author_info()
+{
+    local found_path_config=$1
 
     [[ -n "${found_path_config}" ]] && {
-        stored_path=$(echo ${found_path_config} | cut -d '%' -f 1)
-        user_name=$(echo ${found_path_config} | cut -d '%' -f 2)
-        user_mail=$(echo ${found_path_config} | cut -d '%' -f 3)
+        local info=(${(s:%:)found_path_config})
+        local stored_path=${info[1]}
+        local user_name=${info[2]}
+        local user_mail=${info[3]}
 
         # Configure
         git config --local user.name "${user_name}"
         git config --local user.email "${user_mail}"
 
         echo "This repository was configured by following settings"
-        echo "  Base config path : ${stored_path}"
-        echo "  User name        : ${user_name}"
-        echo "  Mail address     : ${user_mail}"
+        echo "    -> Base config path : ${stored_path}"
+        echo "    -> User name        : ${user_name}"
+        echo "    -> Mail address     : ${user_mail}"
     }
 }
 
-zgit-repo-user-config-main $*
+function local::zgit-repo-user-config::validation::include_path()
+{
+    # Check path included or not
+    cat ${ZGITREPO_USER_CONFIG_FILE} | while read stored_path_config; do
+        local info=(${(s:%:)stored_path_config})
+        local stored_path=${info[1]}
+
+        [[ "$(pwd)" =~ "^${stored_path}.*$" ]] && {
+            echo "[ERROR] Registered path ${stored_path} includes current directory" 1>&2
+            return 1
+        }
+
+        [[ "${stored_path}" =~ "^$(pwd).*$" ]] && {
+            echo "[ERROR] Child path ${stored_path} is already registered" 1>&2
+            return 1
+        }
+    ; done
+
+    return 0
+}
+function local::zgit-repo-user-config::validation::in_git_branch()
+{
+    [[ -z "$(git branch 2>/dev/null)" ]] && {
+        return 1
+    }
+
+    return 0
+}
+function local::zgit-repo-user-config::validation::configuration_file()
+{
+    # Check configuration file
+    [[ -z "${ZGITREPO_USER_CONFIG_FILE}" || ! -e ${ZGITREPO_USER_CONFIG_FILE} ]] && {
+        return 1
+    }
+
+    return 0
+}
+
+function local::zgit-repo-user-config::validation::git_configured_state()
+{
+    [[ -n "$(git config --local user.name)" || -n "$(git config --local user.email)" ]] && {
+        return 1
+    }
+
+    return 0
+}
+
+function local::zgit-repo-user-config::search::proper_configuration()
+{
+    local found_path_config stored_path_config
+
+    cat ${ZGITREPO_USER_CONFIG_FILE} | while read stored_path_config; do
+        local info=(${(s:%:)stored_path_config})
+        [[ "$(pwd)" =~ "^${info[1]}.*$" ]] && {
+            found_path_config=${stored_path_config}
+            break
+        }
+    ; done
+
+    echo ${found_path_config}
+}
+
+function local::zgit-repo-user-config::main()
+{
+    # If option -a is given, configure as new path
+    while getopts :a opt; do
+        case ${opt} in
+            a)
+                [[ -n "${ZGITREPO_USER_CONFIG_FILE}" ]] && {
+                    local::zgit-repo-user-config::configuration::init
+
+                    local::zgit-repo-user-config::validation::include_path
+                    [[ $? != 0 ]] && return 1
+
+                    local::zgit-repo-user-config::configuration::add
+
+                    return 0
+
+                } || {
+                    echo "[ERROR] Variable ZGITREPO_USER_CONFIG_FILE not configured" 1>&2
+                    return -1
+                }
+                ;;
+        esac
+    ; done
+
+
+    # Check current directory is under git repo or not
+    local::zgit-repo-user-config::validation::in_git_branch
+    [[ $? != 0 ]] && return 1
+
+    # Check configuration file
+    local::zgit-repo-user-config::validation::configuration_file
+    [[ $? != 0 ]] && return 1
+
+    # Check local user is configured or not
+    local::zgit-repo-user-config::validation::git_configured_state
+    [[ $? != 0 ]] && return 1
+
+    # Search configuration for top directory
+    local found_path_config=$(local::zgit-repo-user-config::search::proper_configuration)
+
+    # Setup
+    local::zgit-repo-user-config::configuration::setup_author_info ${found_path_config}
+}
+
+local::zgit-repo-user-config::main $*
