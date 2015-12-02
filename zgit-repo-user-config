@@ -32,9 +32,10 @@ function local::zgit-repo-user-config::configuration::setup_author_info()
     local found_path_config=$1
 
     [[ -n "${found_path_config}" ]] && {
-        local stored_path=$(echo ${found_path_config} | cut -d '%' -f 1)
-        local user_name=$(echo ${found_path_config} | cut -d '%' -f 2)
-        local user_mail=$(echo ${found_path_config} | cut -d '%' -f 3)
+        local info=(${(s:%:)found_path_config})
+        local stored_path=${info[1]}
+        local user_name=${info[2]}
+        local user_mail=${info[3]}
 
         # Configure
         git config --local user.name "${user_name}"
@@ -49,10 +50,11 @@ function local::zgit-repo-user-config::configuration::setup_author_info()
 
 function local::zgit-repo-user-config::validation::include_path()
 {
-    local stored_path
-
     # Check path included or not
-    foreach stored_path ($(cat ${ZGITREPO_USER_CONFIG_FILE} | cut -d '%' -f 1)); do
+    cat ${ZGITREPO_USER_CONFIG_FILE} | while read stored_path_config; do
+        local info=(${(s:%:)stored_path_config})
+        local stored_path=${info[1]}
+
         [[ "$(pwd)" =~ "^${stored_path}.*$" ]] && {
             echo "[ERROR] Registered path ${stored_path} includes current directory" 1>&2
             return 1
@@ -98,7 +100,8 @@ function local::zgit-repo-user-config::search::proper_configuration()
     local found_path_config stored_path_config
 
     cat ${ZGITREPO_USER_CONFIG_FILE} | while read stored_path_config; do
-        [[ "$(pwd)" =~ "^$(echo ${stored_path_config} | cut -d '%' -f 1).*$" ]] && {
+        local info=(${(s:%:)stored_path_config})
+        [[ "$(pwd)" =~ "^${info[1]}.*$" ]] && {
             found_path_config=${stored_path_config}
             break
         }
