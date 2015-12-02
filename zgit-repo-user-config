@@ -1,3 +1,52 @@
+function local::zgit-repo-user-config::configuration::init()
+{
+    [[ ! -e ${ZGITREPO_USER_CONFIG_FILE} ]] && {
+        touch ${ZGITREPO_USER_CONFIG_FILE}
+        echo "[INFO] Initialized ${ZGITREPO_USER_CONFIG_FILE}"
+    }
+}
+
+function local::zgit-repo-user-config::configuration::add()
+{
+    # Put user information
+    vared -p 'Your name  >> ' -c user_name
+    vared -p 'Your email >> ' -c user_mail
+
+    [[ -z "${user_name}" || -z "${user_mail}" ]] && {
+        echo "[ERROR] Username and mail address must be specified" 1>&2
+        return -1
+    }
+
+    # Write record
+    echo "$(pwd)%${user_name}%${user_mail}" >> ${ZGITREPO_USER_CONFIG_FILE}
+
+    # Show information
+    echo "Configured as"
+    echo "    Path:  $(pwd)"
+    echo "    Name:  ${user_name}"
+    echo "    Email: ${user_mail}"
+}
+
+function local::zgit-repo-user-config::validation::include_path()
+{
+    local stored_path
+
+    # Check path included or not
+    foreach stored_path ($(cat ${ZGITREPO_USER_CONFIG_FILE} | cut -d '%' -f 1)); do
+        [[ "$(pwd)" =~ "^${stored_path}.*$" ]] && {
+            echo "[ERROR] Registered path ${stored_path} includes current directory" 1>&2
+            return 1
+        }
+
+        [[ "${stored_path}" =~ "^$(pwd).*$" ]] && {
+            echo "[ERROR] Child path ${stored_path} is already registered" 1>&2
+            return 1
+        }
+    ; done
+
+    return 0
+}
+
 function local::zgit-repo-user-config::main()
 {
     # If option -a is given, configure as new path
@@ -9,41 +58,12 @@ function local::zgit-repo-user-config::main()
         case ${opt} in
             a)
                 [[ -n "${ZGITREPO_USER_CONFIG_FILE}" ]] && {
-                    [[ ! -e $ZGITREPO_USER_CONFIG_FILE ]] && {
-                        touch $ZGITREPO_USER_CONFIG_FILE
-                        echo "[INFO] Initialized ${ZGITREPO_USER_CONFIG_FILE}"
-                    }
+                    local::zgit-repo-user-config::configuration::init
 
-                    # Check path included or not
-                    foreach stored_path ($(cat $ZGITREPO_USER_CONFIG_FILE | cut -d '%' -f 1)); do
-                        [[ "$(pwd)" =~ "^${stored_path}.*$" ]] && {
-                            echo "[ERROR] Registered path ${stored_path} includes current directory" 1>&2
-                            return -1
-                        }
+                    local::zgit-repo-user-config::validation::include_path
+                    [[ $? != 0 ]] && return 1
 
-                        [[ "${stored_path}" =~ "^$(pwd).*$" ]] && {
-                            echo "[ERROR] Child path ${stored_path} is already registered" 1>&2
-                            return -1
-                        }
-                    ; done
-
-                    # Put user information
-                    vared -p 'Your name  >> ' -c user_name
-                    vared -p 'Your email >> ' -c user_mail
-
-                    [[ -z "${user_name}" || -z "${user_mail}" ]] && {
-                        echo "[ERROR] Username and mail address must be specified" 1>&2
-                        return -1
-                    }
-
-                    # Write record
-                    echo "$(pwd)%${user_name}%${user_mail}" >> $ZGITREPO_USER_CONFIG_FILE
-
-                    # Show information
-                    echo "Configured as"
-                    echo "    Path:  $(pwd)"
-                    echo "    Name:  ${user_name}"
-                    echo "    Email: ${user_mail}"
+                    local::zgit-repo-user-config::configuration::add
 
                     return 0
 
