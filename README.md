@@ -2,6 +2,8 @@
 
 This zsh plugin was developed for auto user information configuration of git repositories under user's specified directory.
 
+![sample](https://raw.githubusercontent.com/kmhjs/zgit-repo-user-config/master/image/preview.gif)
+
 ## How to set up
 
 Write configuration in your `.zshenv` as follows.
