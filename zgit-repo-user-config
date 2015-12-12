@@ -33,18 +33,20 @@ function local::zgit-repo-user-config::configuration::setup_author_info()
 
     [[ -n "${found_path_config}" ]] && {
         local info=(${(s:%:)found_path_config})
-        local stored_path=${info[1]}
-        local user_name=${info[2]}
-        local user_mail=${info[3]}
+        local -A configs=()
+
+        configs[stored_path]=${info[1]}
+        configs[user_name]=${info[2]}
+        configs[user_mail]=${info[3]}
 
         # Configure
-        git config --local user.name "${user_name}"
-        git config --local user.email "${user_mail}"
+        git config --local user.name "${configs[user_name]}"
+        git config --local user.email "${configs[user_mail]}"
 
         echo "This repository was configured by following settings"
-        echo "    -> Base config path : ${stored_path}"
-        echo "    -> User name        : ${user_name}"
-        echo "    -> Mail address     : ${user_mail}"
+        echo "    -> Base config path : ${configs[stored_path]}"
+        echo "    -> User name        : ${configs[user_name]}"
+        echo "    -> Mail address     : ${configs[user_mail]}"
     }
 }
 
@@ -135,17 +137,16 @@ function local::zgit-repo-user-config::main()
     ; done
 
 
-    # Check current directory is under git repo or not
-    local::zgit-repo-user-config::validation::in_git_branch
-    [[ $? != 0 ]] && return 1
-
-    # Check configuration file
-    local::zgit-repo-user-config::validation::configuration_file
-    [[ $? != 0 ]] && return 1
-
-    # Check local user is configured or not
-    local::zgit-repo-user-config::validation::git_configured_state
-    [[ $? != 0 ]] && return 1
+    # Check
+    #   * current directory is under git repo or not
+    #   * configuration file
+    #   * local user is configured or not
+    local validators=(in_git_branch configuration_file git_configured_state)
+    local validator=''
+    for validator (${validators}); do
+        local::zgit-repo-user-config::validation::${validator}
+        [[ $? != 0 ]] && return 1
+    ; done
 
     # Search configuration for top directory
     local found_path_config=$(local::zgit-repo-user-config::search::proper_configuration)
