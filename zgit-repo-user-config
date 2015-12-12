@@ -135,17 +135,16 @@ function local::zgit-repo-user-config::main()
     ; done
 
 
-    # Check current directory is under git repo or not
-    local::zgit-repo-user-config::validation::in_git_branch
-    [[ $? != 0 ]] && return 1
-
-    # Check configuration file
-    local::zgit-repo-user-config::validation::configuration_file
-    [[ $? != 0 ]] && return 1
-
-    # Check local user is configured or not
-    local::zgit-repo-user-config::validation::git_configured_state
-    [[ $? != 0 ]] && return 1
+    # Check
+    #   * current directory is under git repo or not
+    #   * configuration file
+    #   * local user is configured or not
+    local validators=(in_git_branch configuration_file git_configured_state)
+    local validator=''
+    for validator (${validators}); do
+        local::zgit-repo-user-config::validation::${validator}
+        [[ $? != 0 ]] && return 1
+    ; done
 
     # Search configuration for top directory
     local found_path_config=$(local::zgit-repo-user-config::search::proper_configuration)
