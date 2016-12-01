@@ -42,9 +42,9 @@ function _zgit-repo-user-config::configuration::add()
 
   # Show information
   echo "Configured as"
-  echo "    Path:  $(pwd)"
-  echo "    Name:  ${user_name}"
-  echo "    Email: ${user_mail}"
+  echo "  Path:  $(pwd)"
+  echo "  Name:  ${user_name}"
+  echo "  Email: ${user_mail}"
 }
 
 #
@@ -73,9 +73,9 @@ function _zgit-repo-user-config::configuration::apply()
     git config --local user.email "${configs['user_mail']}"
 
     echo "This repository was configured by following settings"
-    echo "    -> Base config path : ${configs['stored_path']}"
-    echo "    -> User name        : ${configs['user_name']}"
-    echo "    -> Mail address     : ${configs['user_mail']}"
+    echo "  -> Base config path : ${configs['stored_path']}"
+    echo "  -> User name        : ${configs['user_name']}"
+    echo "  -> Mail address     : ${configs['user_mail']}"
   fi
 }
 
