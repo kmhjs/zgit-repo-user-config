@@ -79,7 +79,7 @@ function local::zgit-repo-user-config::validation::include_path()
 
 function local::zgit-repo-user-config::validation::in_git_branch()
 {
-  [[ -n "$(git rev-parse --is-inside-work-tree 1>/dev/null 2>/dev/null)" ]]
+  git rev-parse --is-inside-work-tree 1>/dev/null 2>/dev/null
 
   return $?
 }
@@ -99,6 +99,25 @@ function local::zgit-repo-user-config::validation::git_configured_state()
   return $?
 }
 
+function local::zgit-repo-user-config::validation::core()
+{
+  # Check
+  #   * current directory is under git repo or not
+  #   * configuration file
+  #   * local user is configured or not
+  local validators=(in_git_branch configuration_file git_configured_state)
+  local validator=''
+  for validator (${validators})
+  do
+    if ! local::zgit-repo-user-config::validation::${validator}
+    then
+      return 1
+    fi
+  done
+
+  return 0
+}
+
 function local::zgit-repo-user-config::search::proper_configuration()
 {
   local found_path_config stored_path_config
@@ -116,48 +135,40 @@ function local::zgit-repo-user-config::search::proper_configuration()
   echo ${found_path_config}
 }
 
+function local::zgit-repo-user-config::command::add_new_configuration()
+{
+  if [[ -z "${ZGITREPO_USER_CONFIG_FILE}" ]]
+  then
+    echo "[ERROR] Variable ZGITREPO_USER_CONFIG_FILE not configured" 1>&2
+    return 1
+  fi
+
+  local::zgit-repo-user-config::configuration::init
+
+  if ! local::zgit-repo-user-config::validation::include_path
+  then
+    return 1
+  fi
+
+  local::zgit-repo-user-config::configuration::add
+
+  return 0
+}
+
 function local::zgit-repo-user-config::main()
 {
   # If option -a is given, configure as new path
-  while getopts :a opt
-  do
-    case ${opt} in
-      a)
-        if [[ -z "${ZGITREPO_USER_CONFIG_FILE}" ]]
-        then
-          echo "[ERROR] Variable ZGITREPO_USER_CONFIG_FILE not configured" 1>&2
-          return 1
-        fi
+  local add_new_config_flag=${1}
+  if [[ ${add_new_config_flag} == '-a' ]]
+  then
+    local::zgit-repo-user-config::command::add_new_configuration
+    return $?
+  fi
 
-        local::zgit-repo-user-config::configuration::init
-
-        if ! local::zgit-repo-user-config::validation::include_path
-        then
-          return 1
-        fi
-
-        local::zgit-repo-user-config::configuration::add
-
-        return 0
-
-        ;;
-    esac
-  done
-
-
-  # Check
-  #   * current directory is under git repo or not
-  #   * configuration file
-  #   * local user is configured or not
-  local validators=(in_git_branch configuration_file git_configured_state)
-  local validator=''
-  for validator (${validators})
-  do
-    if ! local::zgit-repo-user-config::validation::${validator}
-    then
-      return 1
-    fi
-  done
+  if ! local::zgit-repo-user-config::validation::core
+  then
+    return 1
+  fi
 
   # Search configuration for top directory
   local found_path_config=$(local::zgit-repo-user-config::search::proper_configuration)
