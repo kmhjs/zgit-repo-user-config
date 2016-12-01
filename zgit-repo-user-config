@@ -76,34 +76,27 @@ function local::zgit-repo-user-config::validation::include_path()
 
   return 0
 }
+
 function local::zgit-repo-user-config::validation::in_git_branch()
 {
-  if [[ -z "$(git branch 2>/dev/null)" ]]
-  then
-    return 1
-  fi
+  [[ -n "$(git branch 2>/dev/null)" ]]
 
-  return 0
+  return $?
 }
+
 function local::zgit-repo-user-config::validation::configuration_file()
 {
   # Check configuration file
-  if [[ -z "${ZGITREPO_USER_CONFIG_FILE}" || ! -e ${ZGITREPO_USER_CONFIG_FILE} ]]
-  then
-    return 1
-  fi
+  [[ -n "${ZGITREPO_USER_CONFIG_FILE}" && -e ${ZGITREPO_USER_CONFIG_FILE} ]]
 
-  return 0
+  return $?
 }
 
 function local::zgit-repo-user-config::validation::git_configured_state()
 {
-  if [[ -n "$(git config --local user.name)" || -n "$(git config --local user.email)" ]]
-  then
-    return 1
-  fi
+  [[ -z "$(git config --local user.name)" && -z "$(git config --local user.email)" ]]
 
-  return 0
+  return $?
 }
 
 function local::zgit-repo-user-config::search::proper_configuration()
@@ -130,21 +123,22 @@ function local::zgit-repo-user-config::main()
   do
     case ${opt} in
       a)
-        if [[ -n "${ZGITREPO_USER_CONFIG_FILE}" ]]
+        if [[ -z "${ZGITREPO_USER_CONFIG_FILE}" ]]
         then
-          local::zgit-repo-user-config::configuration::init
-
-          local::zgit-repo-user-config::validation::include_path
-          [[ $? != 0 ]] && return 1
-
-          local::zgit-repo-user-config::configuration::add
-
-          return 0
-
-        else
           echo "[ERROR] Variable ZGITREPO_USER_CONFIG_FILE not configured" 1>&2
           return 1
         fi
+
+        local::zgit-repo-user-config::configuration::init
+
+        if ! local::zgit-repo-user-config::validation::include_path
+        then
+          return 1
+        fi
+
+        local::zgit-repo-user-config::configuration::add
+
+        return 0
 
         ;;
     esac
@@ -159,8 +153,7 @@ function local::zgit-repo-user-config::main()
   local validator=''
   for validator (${validators})
   do
-    local::zgit-repo-user-config::validation::${validator}
-    if [[ $? != 0 ]]
+    if ! local::zgit-repo-user-config::validation::${validator}
     then
       return 1
     fi
