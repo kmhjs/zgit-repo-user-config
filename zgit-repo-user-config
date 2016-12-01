@@ -1,4 +1,4 @@
-function local::zgit-repo-user-config::configuration::init()
+function _zgit-repo-user-config::configuration::init()
 {
   if [[ ! -e ${ZGITREPO_USER_CONFIG_FILE} ]]
   then
@@ -7,7 +7,7 @@ function local::zgit-repo-user-config::configuration::init()
   fi
 }
 
-function local::zgit-repo-user-config::configuration::add()
+function _zgit-repo-user-config::configuration::add()
 {
   # Put user information
   vared -p 'Your name  >> ' -c user_name
@@ -29,7 +29,7 @@ function local::zgit-repo-user-config::configuration::add()
   echo "    Email: ${user_mail}"
 }
 
-function local::zgit-repo-user-config::configuration::setup_author_info()
+function _zgit-repo-user-config::configuration::setup_author_info()
 {
   local found_path_config=$1
 
@@ -53,7 +53,7 @@ function local::zgit-repo-user-config::configuration::setup_author_info()
   fi
 }
 
-function local::zgit-repo-user-config::validation::include_path()
+function _zgit-repo-user-config::validation::include_path()
 {
   # Check path included or not
   cat ${ZGITREPO_USER_CONFIG_FILE} | while read stored_path_config
@@ -77,14 +77,14 @@ function local::zgit-repo-user-config::validation::include_path()
   return 0
 }
 
-function local::zgit-repo-user-config::validation::in_git_branch()
+function _zgit-repo-user-config::validation::in_git_branch()
 {
   git rev-parse --is-inside-work-tree 1>/dev/null 2>/dev/null
 
   return $?
 }
 
-function local::zgit-repo-user-config::validation::configuration_file()
+function _zgit-repo-user-config::validation::configuration_file()
 {
   # Check configuration file
   [[ -n "${ZGITREPO_USER_CONFIG_FILE}" && -e ${ZGITREPO_USER_CONFIG_FILE} ]]
@@ -92,14 +92,14 @@ function local::zgit-repo-user-config::validation::configuration_file()
   return $?
 }
 
-function local::zgit-repo-user-config::validation::git_configured_state()
+function _zgit-repo-user-config::validation::git_configured_state()
 {
   [[ -z "$(git config --local user.name)" && -z "$(git config --local user.email)" ]]
 
   return $?
 }
 
-function local::zgit-repo-user-config::validation::core()
+function _zgit-repo-user-config::validation::core()
 {
   # Check
   #   * current directory is under git repo or not
@@ -109,7 +109,7 @@ function local::zgit-repo-user-config::validation::core()
   local validator=''
   for validator (${validators})
   do
-    if ! local::zgit-repo-user-config::validation::${validator}
+    if ! _zgit-repo-user-config::validation::${validator}
     then
       return 1
     fi
@@ -118,7 +118,7 @@ function local::zgit-repo-user-config::validation::core()
   return 0
 }
 
-function local::zgit-repo-user-config::search::proper_configuration()
+function _zgit-repo-user-config::search::proper_configuration()
 {
   local found_path_config stored_path_config
 
@@ -135,7 +135,7 @@ function local::zgit-repo-user-config::search::proper_configuration()
   echo ${found_path_config}
 }
 
-function local::zgit-repo-user-config::command::add_new_configuration()
+function _zgit-repo-user-config::command::add_new_configuration()
 {
   if [[ -z "${ZGITREPO_USER_CONFIG_FILE}" ]]
   then
@@ -143,38 +143,38 @@ function local::zgit-repo-user-config::command::add_new_configuration()
     return 1
   fi
 
-  local::zgit-repo-user-config::configuration::init
+  _zgit-repo-user-config::configuration::init
 
-  if ! local::zgit-repo-user-config::validation::include_path
+  if ! _zgit-repo-user-config::validation::include_path
   then
     return 1
   fi
 
-  local::zgit-repo-user-config::configuration::add
+  _zgit-repo-user-config::configuration::add
 
   return 0
 }
 
-function local::zgit-repo-user-config::main()
+function _zgit-repo-user-config::main()
 {
   # If option -a is given, configure as new path
   local add_new_config_flag=${1}
   if [[ ${add_new_config_flag} == '-a' ]]
   then
-    local::zgit-repo-user-config::command::add_new_configuration
+    _zgit-repo-user-config::command::add_new_configuration
     return $?
   fi
 
-  if ! local::zgit-repo-user-config::validation::core
+  if ! _zgit-repo-user-config::validation::core
   then
     return 1
   fi
 
   # Search configuration for top directory
-  local found_path_config=$(local::zgit-repo-user-config::search::proper_configuration)
+  local found_path_config=$(_zgit-repo-user-config::search::proper_configuration)
 
   # Setup
-  local::zgit-repo-user-config::configuration::setup_author_info ${found_path_config}
+  _zgit-repo-user-config::configuration::setup_author_info ${found_path_config}
 }
 
-local::zgit-repo-user-config::main $*
+_zgit-repo-user-config::main $*
