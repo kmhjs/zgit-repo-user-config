@@ -61,6 +61,14 @@ add-zsh-hook precmd zgit-repo-user-config
 Use old releases in [release](https://github.com/kmhjs/zgit-repo-user-config/releases/tag/release-20170121_without_zcl_final) or [branch](https://github.com/kmhjs/zgit-repo-user-config/tree/release/20170121_without_zcl_final) .  
 Note that this branch will not be maintained.
 
+## If you have old-format (before zcl format) configuration
+
+You need to migrate your configuration to new format.  
+Please use `util/migrate.sh` for this purpose. If you have proper configuration
+for variable `ZGITREPO_USER_CONFIG_FILE`, the new format configuration will be
+displayed. After display, please paste (replace) new format configuration to
+actual configuration file.
+
 ## License
 
 See `LICENSE`.
