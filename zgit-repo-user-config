@@ -38,7 +38,11 @@ function _zgit-repo-user-config::configuration::add()
   fi
 
   # Write record
-  echo "$(pwd)%${user_name}%${user_mail}" >> ${ZGITREPO_USER_CONFIG_FILE}
+  echo '('                       >> ${ZGITREPO_USER_CONFIG_FILE}
+  echo "  :path '$(pwd)'"        >> ${ZGITREPO_USER_CONFIG_FILE}
+  echo "  :name '${user_name}'"  >> ${ZGITREPO_USER_CONFIG_FILE}
+  echo "  :email '${user_mail}'" >> ${ZGITREPO_USER_CONFIG_FILE}
+  echo ')'                       >> ${ZGITREPO_USER_CONFIG_FILE}
 
   # Show information
   echo "Configured as"
@@ -50,60 +54,68 @@ function _zgit-repo-user-config::configuration::add()
 #
 # Apply configuration for current directory
 #
-# This method requires formatted path configuration
-#
-# @param found_path_config Configuration line includes information of
-#                          parent path, author name and author e-mail address
+# @param stored_path Root directory path for configuration
+# @param user_name User name to be configured
+# @param user_email User email address to be configured
 #
 function _zgit-repo-user-config::configuration::apply()
 {
-  local found_path_config=$1
+  local stored_path=$1
+  local user_name=$2
+  local user_email=$3
 
-  if [[ -n "${found_path_config}" ]]
+  if [[ -n ${stored_path} && -n ${user_name} && -n ${user_email} ]]
   then
-    local info=(${(s:%:)found_path_config})
-    local -A configs=()
-
-    configs['stored_path']=${info[1]}
-    configs['user_name']=${info[2]}
-    configs['user_mail']=${info[3]}
-
     # Configure
-    git config --local user.name "${configs['user_name']}"
-    git config --local user.email "${configs['user_mail']}"
+    git config --local user.name ${user_name}
+    git config --local user.email ${user_email}
 
     echo "This repository was configured by following settings"
-    echo "  -> Base config path : ${configs['stored_path']}"
-    echo "  -> User name        : ${configs['user_name']}"
-    echo "  -> Mail address     : ${configs['user_mail']}"
+    echo "  -> Base config path : ${stored_path}"
+    echo "  -> User name        : ${user_name}"
+    echo "  -> Mail address     : ${user_email}"
   fi
 }
 
 #
-# Loads configuration for current directory
+# Validate path and apply the configuration
 #
-# This method requires ${ZGITREPO_USER_CONFIG_FILE} configuration.
+# This function will be called by zcl
 #
-function _zgit-repo-user-config::configuration::load()
+# @param stored_path Root directory path for configuration
+# @param user_name User name to be configured
+# @param user_email User email address to be configured
+#
+function _zgit-repo-user-config::configuration::configure()
 {
-  local found_path_config stored_path_config
+  local stored_path=$1
+  local user_name=$2
+  local user_email=$3
 
-  cat ${ZGITREPO_USER_CONFIG_FILE} | while read stored_path_config
-  do
-    local info=(${(s:%:)stored_path_config})
-    if [[ "$(pwd)" =~ "^${info[1]}.*$" ]]
-    then
-      found_path_config=${stored_path_config}
-      break
-    fi
-  done
+  # HACK: To exit the zcl run, return 1 as exit code
+  local -A exit_code=(success 1 failure 0)
 
-  echo ${found_path_config}
+  if [[ "$(pwd)" =~ "^${stored_path}.*$" ]]
+  then
+    _zgit-repo-user-config::configuration::apply ${stored_path} ${user_name} ${user_email}
+
+    return ${exit_code[success]}
+  fi
+
+  return ${exit_code[failure]}
 }
 
 #
 # - Validation tasks
 #
+
+#
+# Validates zcl command is exist or not.
+#
+function _zgit-repo-user-config::validation::is_zcl_available()
+{
+  type zcl 1>/dev/null 2>/dev/null
+}
 
 #
 # Validates current path is subdirectory of configured path or not
@@ -113,11 +125,9 @@ function _zgit-repo-user-config::configuration::load()
 function _zgit-repo-user-config::validation::is_configured_parent_directory()
 {
   # Check path included or not
-  cat ${ZGITREPO_USER_CONFIG_FILE} | while read stored_path_config
+  #cat ${ZGITREPO_USER_CONFIG_FILE} | while read stored_path_config
+  zcl ${ZGITREPO_USER_CONFIG_FILE} echo :path | while read stored_path
   do
-    local info=(${(s:%:)stored_path_config})
-    local stored_path=${info[1]}
-
     if [[ "$(pwd)" =~ "^${stored_path}.*$" ]]
     then
       echo "[ERROR] Registered path ${stored_path} includes current directory" 1>&2
@@ -140,8 +150,6 @@ function _zgit-repo-user-config::validation::is_configured_parent_directory()
 function _zgit-repo-user-config::validation::is_in_repository()
 {
   git rev-parse --is-inside-work-tree 1>/dev/null 2>/dev/null
-
-  return $?
 }
 
 #
@@ -153,8 +161,6 @@ function _zgit-repo-user-config::validation::is_exist_configuration_file()
 {
   # Check configuration file
   [[ -n "${ZGITREPO_USER_CONFIG_FILE}" && -e ${ZGITREPO_USER_CONFIG_FILE} ]]
-
-  return $?
 }
 
 #
@@ -163,8 +169,6 @@ function _zgit-repo-user-config::validation::is_exist_configuration_file()
 function _zgit-repo-user-config::validation::is_configured_author()
 {
   [[ -z "$(git config --local user.name)" && -z "$(git config --local user.email)" ]]
-
-  return $?
 }
 
 #
@@ -235,9 +239,17 @@ function _zgit-repo-user-config::command::add_new_configuration()
 #
 function _zgit-repo-user-config::main()
 {
+  local mode=$1
+
+  # Check zcl command is exist or not.
+  if ! _zgit-repo-user-config::validation::is_zcl_available
+  then
+    echo '[ERROR] zcl command required.' 1>&2
+    return 1
+  fi
+
   # If option -a is given, configure as new path
-  local add_new_config_flag=${1}
-  if [[ ${add_new_config_flag} == '-a' ]]
+  if [[ ${mode} == '-a' ]]
   then
     _zgit-repo-user-config::command::add_new_configuration
     return $?
@@ -248,11 +260,8 @@ function _zgit-repo-user-config::main()
     return 1
   fi
 
-  # Search configuration for top directory
-  local found_path_config=$(_zgit-repo-user-config::configuration::load)
-
   # Setup
-  _zgit-repo-user-config::configuration::apply ${found_path_config}
+  zcl ${ZGITREPO_USER_CONFIG_FILE} _zgit-repo-user-config::configuration::configure :path :name :email
 }
 
 _zgit-repo-user-config::main $*
